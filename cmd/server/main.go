@@ -152,7 +152,7 @@ func main() {
 		logger.Fatal()
 	}
 
-	rows = rows[1:50]
+	rows = rows[1:]
 
 	var wg sync.WaitGroup
 	var arr []searchResponse
@@ -169,7 +169,6 @@ func main() {
 
 			resp := buildFullSearchResponse(searcher, 1, *flagThreshold, row.Name, row.Email)
 
-			
 			arr = append(arr, *resp)
 		}(row)
 	}
