@@ -1,0 +1,34 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+.DS_Store
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+coverage.html
+coverage.txt
+*.out
+
+/bin/
+/lint-project.sh
+misspell*
+staticcheck*
+
+# Generated files
+.tmp/
+openapi-generator*jar
+.idea
+
+*.db
+
+webui/build/
+webui/node_modules/
+
+.vscode/
+data/
