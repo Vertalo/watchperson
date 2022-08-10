@@ -5,27 +5,21 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha1"
+	"encoding/hex"
+	"encoding/json"
 	"sync"
 	"time"
-
-	"github.com/moov-io/watchman/pkg/csl"
 )
 
 type searchResponse struct {
 	// OFAC
-	SDNs      []*SDN    `json:"SDNs"`
-	AltNames  []Alt     `json:"altNames"`
-	Addresses []Address `json:"addresses"`
-	Email     string    `json:"email"`
-	FullName  string    `json:"fullName"`
-
-	// BIS
-	DeniedPersons []DP `json:"deniedPersons"`
-
-	// Consolidated Screening List
-	BISEntities       []*Result[csl.EL]  `json:"bisEntities"`
-	MilitaryEndUsers  []*Result[csl.MEU] `json:"militaryEndUsers"`
-	SectoralSanctions []*Result[csl.SSI] `json:"sectoralSanctions"`
+	SDNs     []*SDN   `json:"SDNs"`
+	Email    string   `json:"email"`
+	FullName string   `json:"fullName"`
+	Match    *float64 `json:"match"`
+	Hash     string   `json:"hash"`
 
 	// Metadata
 	RefreshedAt time.Time `json:"refreshedAt"`
@@ -41,15 +35,11 @@ var (
 			sdns := s.FindSDNsByRemarksID(limit, name)
 			if len(sdns) == 0 {
 				resp.SDNs = s.TopSDNs(limit, minMatch, name)
+
+				if len(resp.SDNs) > 0 {
+					resp.Match = &resp.SDNs[0].match
+				}
 			}
-		},
-		// OFAC SDN Alt Names
-		func(s *searcher, limit int, minMatch float64, name string, resp *searchResponse) {
-			resp.AltNames = s.TopAltNames(limit, minMatch, name)
-		},
-		// OFAC Addresses
-		func(s *searcher, limit int, minMatch float64, name string, resp *searchResponse) {
-			resp.Addresses = s.TopAddresses(limit, minMatch, name)
 		},
 	}
 )
@@ -69,5 +59,14 @@ func buildFullSearchResponse(searcher *searcher, limit int, minMatch float64, na
 		}(i)
 	}
 	wg.Wait()
+
+	buffer := new(bytes.Buffer)
+	hasher := sha1.New()
+
+	json.NewEncoder(buffer).Encode(resp)
+
+	hasher.Write(buffer.Bytes())
+	resp.Hash = hex.EncodeToString(hasher.Sum(nil))
+
 	return &resp
 }

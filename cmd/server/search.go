@@ -264,7 +264,7 @@ func (s *searcher) TopAltNames(limit int, minMatch float64, alt string) []Alt {
 func (s *searcher) FindSDN(entityID string) *ofac.SDN {
 	sdn := s.debugSDN(entityID)
 
-	if sdn != nil {
+	if sdn != nil && sdn.SDNType == "individual" {
 		return sdn.SDN
 	}
 

@@ -27,11 +27,12 @@ import (
 var (
 	flagLogFormat = flag.String("log.format", "", "Format for log lines (Options: json, plain")
 	flagMaxProcs  = flag.Int("max-procs", runtime.NumCPU(), "Maximum number of CPUs used for search and endpoints")
-	flagWorkers   = flag.Int("workers", 1024, "Maximum number of goroutines used for search")
+	flagWorkers   = flag.Int("workers", 256, "Maximum number of goroutines used for search")
 
-	flagInputFile = flag.String("file", "./data/input.tsv", "Input file to parse")
-	flagDelimiter = flag.String("delimiter", "\t", "Delimiter for input file")
-	flagThreshold = flag.Float64("threshold", .90, "Threshold for similarity")
+	flagInputFile  = flag.String("input-file", "./data/input.tsv", "Input file to parse")
+	flagOutputFile = flag.String("output-file", "./data/output.json", "Output file to write")
+	flagDelimiter  = flag.String("delimiter", "\t", "Delimiter for input file")
+	flagThreshold  = flag.Float64("threshold", .90, "Threshold for similarity")
 
 	dataRefreshInterval = 1 * time.Hour
 )
@@ -151,7 +152,7 @@ func main() {
 		logger.Fatal()
 	}
 
-	rows = rows[1:]
+	rows = rows[1:50]
 
 	var wg sync.WaitGroup
 	var arr []searchResponse
@@ -167,6 +168,8 @@ func main() {
 			defer wg.Done()
 
 			resp := buildFullSearchResponse(searcher, 1, *flagThreshold, row.Name, row.Email)
+
+			
 			arr = append(arr, *resp)
 		}(row)
 	}
@@ -179,7 +182,7 @@ func main() {
 		logger.LogErrorf("ERROR: failed to marshal search results: %v", err)
 	}
 
-	if err := os.WriteFile("./data/output.json", data, 0644); err != nil {
+	if err := os.WriteFile(*flagOutputFile, data, 0644); err != nil {
 		logger.LogErrorf("ERROR: failed to write search results: %v", err)
 	}
 }
