@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -168,21 +169,30 @@ func main() {
 			defer wg.Done()
 
 			resp := buildFullSearchResponse(searcher, 1, *flagThreshold, row.Name, row.Email)
-
 			arr = append(arr, *resp)
 		}(row)
 	}
 
 	wg.Wait()
 
-	data, err := json.MarshalIndent(arr, "", "\t")
+	data, err := json.Marshal(arr)
 
 	if err != nil {
 		logger.LogErrorf("ERROR: failed to marshal search results: %v", err)
 	}
 
-	if err := os.WriteFile(*flagOutputFile, data, 0644); err != nil {
+	// We want the output file to be stringified JSON now I guess.
+	buffer := bytes.NewBuffer(data)
+	stringified := strconv.Quote(buffer.String())
+	stringBuffer := bytes.NewBufferString(stringified)
+
+	if err := os.WriteFile(*flagOutputFile, stringBuffer.Bytes(), 0644); err != nil {
 		logger.LogErrorf("ERROR: failed to write search results: %v", err)
+	}
+
+	// Remove input file after we're done with it
+	if err := os.Remove(*flagInputFile); err != nil {
+		logger.LogErrorf("ERROR: failed to remove input file: %v", err)
 	}
 }
 
