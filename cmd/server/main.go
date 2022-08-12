@@ -6,7 +6,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -30,10 +29,9 @@ var (
 	flagMaxProcs  = flag.Int("max-procs", runtime.NumCPU(), "Maximum number of CPUs used for search and endpoints")
 	flagWorkers   = flag.Int("workers", 256, "Maximum number of goroutines used for search")
 
-	flagInputFile  = flag.String("input-file", "./data/input.tsv", "Input file to parse")
-	flagOutputFile = flag.String("output-file", "./data/output.json", "Output file to write")
-	flagDelimiter  = flag.String("delimiter", "\t", "Delimiter for input file")
-	flagThreshold  = flag.Float64("threshold", .90, "Threshold for similarity")
+	flagInputFile = flag.String("input-file", "./data/input.tsv", "Input file to parse")
+	flagDelimiter = flag.String("delimiter", "\t", "Delimiter for input file")
+	flagThreshold = flag.Float64("threshold", .90, "Threshold for similarity")
 
 	dataRefreshInterval = 1 * time.Hour
 )
@@ -153,7 +151,7 @@ func main() {
 		logger.Fatal()
 	}
 
-	rows = rows[1:]
+	rows = rows[1:50]
 
 	var wg sync.WaitGroup
 	var arr []searchResponse
@@ -181,19 +179,7 @@ func main() {
 		logger.LogErrorf("ERROR: failed to marshal search results: %v", err)
 	}
 
-	// We want the output file to be stringified JSON now I guess.
-	buffer := bytes.NewBuffer(data)
-	stringified := strconv.Quote(buffer.String())
-	stringBuffer := bytes.NewBufferString(stringified)
-
-	if err := os.WriteFile(*flagOutputFile, stringBuffer.Bytes(), 0644); err != nil {
-		logger.LogErrorf("ERROR: failed to write search results: %v", err)
-	}
-
-	// Remove input file after we're done with it
-	if err := os.Remove(*flagInputFile); err != nil {
-		logger.LogErrorf("ERROR: failed to remove input file: %v", err)
-	}
+	fmt.Printf("%s", data)
 }
 
 // getDataRefreshInterval returns a time.Duration for how often OFAC should refresh data

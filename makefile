@@ -4,10 +4,10 @@ VERSION := $(shell grep -Eo '(v[0-9]+[\.][0-9]+[\.][0-9]+(-[a-zA-Z0-9]*)?)' vers
 .PHONY: build docker release check clean
 
 build:
-	CGO_ENABLED=1 go build -o ./bin/server github.com/moov-io/watchman/cmd/server
+	@CGO_ENABLED=1 go build -o ./bin/server github.com/moov-io/watchman/cmd/server
 
 start: build
-	./bin/server
+	@./bin/server
 
 .PHONY: check
 check:
