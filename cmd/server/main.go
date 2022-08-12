@@ -42,32 +42,6 @@ type FileRow struct {
 	Email string `json:"email"`
 }
 
-// parseFile only handles files that can be split on a delimiter for now
-// A future iteration of this function should be as an implementation of
-// a FileParser interface
-func parseFile(path string, delimiter string) ([]FileRow, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	regex := regexp.MustCompile(delimiter)
-
-	var rows []FileRow
-
-	for scanner.Scan() {
-		words := regex.Split(scanner.Text(), 3)
-		row := FileRow{Id: words[0], Name: words[2], Email: words[1]}
-
-		rows = append(rows, row)
-	}
-
-	return rows, nil
-}
-
 func main() {
 	flag.Parse()
 
@@ -81,6 +55,14 @@ func main() {
 		logger = log.NewJSONLogger()
 	} else {
 		logger = log.NewDefaultLogger()
+	}
+
+	if v := os.Getenv("THRESHOLD"); v != "" && !flagPassed("threshold") {
+		threshold, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			logger.LogErrorf("invalid THRESHOLD: %v", err)
+		}
+		*flagThreshold = threshold
 	}
 
 	// Channel for errors
@@ -151,7 +133,12 @@ func main() {
 		logger.Fatal()
 	}
 
-	rows = rows[1:50]
+	// Remove input file
+	if err = os.Remove(*flagInputFile); err != nil {
+		logger.LogErrorf("ERROR: failed to remove input file: %v", err)
+	}
+
+	rows = rows[1:]
 
 	var wg sync.WaitGroup
 	var arr []searchResponse
@@ -179,6 +166,11 @@ func main() {
 		logger.LogErrorf("ERROR: failed to marshal search results: %v", err)
 	}
 
+	// Remove downloaded data
+	if err = os.RemoveAll(os.Getenv("INITIAL_DATA_DIRECTORY")); err != nil {
+		logger.LogErrorf("ERROR: failed to remove downloaded data: %v", err)
+	}
+
 	fmt.Printf("%s", data)
 }
 
@@ -195,4 +187,42 @@ func getDataRefreshInterval(logger log.Logger, env string) time.Duration {
 	}
 	logger.Logf("Setting data refresh interval to %v (default)", dataRefreshInterval)
 	return dataRefreshInterval
+}
+
+func flagPassed(name string) bool {
+	found := false
+
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+
+	return found
+}
+
+// parseFile only handles files that can be split on a delimiter for now
+// A future iteration of this function should be as an implementation of
+// a FileParser interface
+func parseFile(path string, delimiter string) ([]FileRow, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	regex := regexp.MustCompile(delimiter)
+
+	var rows []FileRow
+
+	for scanner.Scan() {
+		words := regex.Split(scanner.Text(), 3)
+		row := FileRow{Id: words[0], Name: words[2], Email: words[1]}
+
+		rows = append(rows, row)
+	}
+
+	return rows, nil
 }
