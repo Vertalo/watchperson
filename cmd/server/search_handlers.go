@@ -25,6 +25,17 @@ type searchResponse struct {
 	RefreshedAt time.Time `json:"refreshedAt"`
 }
 
+func (s searchResponse) HashResponse() string {
+	buffer := new(bytes.Buffer)
+	hasher := sha1.New()
+
+	s.RefreshedAt = time.Time{}
+
+	json.NewEncoder(buffer).Encode(s)
+	hasher.Write(buffer.Bytes())
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
 // searchGather performs an inmem search with *searcher and mutates *searchResponse by setting a specific field
 type searchGather func(searcher *searcher, limit int, minMatch float64, name string, resp *searchResponse)
 
@@ -60,13 +71,7 @@ func buildFullSearchResponse(searcher *searcher, limit int, minMatch float64, na
 	}
 	wg.Wait()
 
-	buffer := new(bytes.Buffer)
-	hasher := sha1.New()
-
-	json.NewEncoder(buffer).Encode(resp)
-
-	hasher.Write(buffer.Bytes())
-	resp.Hash = hex.EncodeToString(hasher.Sum(nil))
+	resp.Hash = resp.HashResponse()
 
 	return &resp
 }
