@@ -27,7 +27,7 @@ import (
 var (
 	flagLogFormat = flag.String("log.format", "", "Format for log lines (Options: json, plain")
 	flagMaxProcs  = flag.Int("max-procs", runtime.NumCPU(), "Maximum number of CPUs used for search and endpoints")
-	flagWorkers   = flag.Int("workers", 256, "Maximum number of goroutines used for search")
+	flagWorkers   = flag.Int("workers", 1024, "Maximum number of goroutines used for search")
 
 	flagInputFile = flag.String("input-file", "./data/input.tsv", "Input file to parse")
 	flagDelimiter = flag.String("delimiter", "\t", "Delimiter for input file")
