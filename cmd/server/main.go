@@ -15,19 +15,17 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/moov-io/base/log"
 	"github.com/moov-io/watchman/internal/database"
-	"go4.org/syncutil"
 )
 
 var (
 	flagLogFormat = flag.String("log.format", "", "Format for log lines (Options: json, plain")
 	flagMaxProcs  = flag.Int("max-procs", runtime.NumCPU(), "Maximum number of CPUs used for search and endpoints")
-	flagWorkers   = flag.Int("workers", 1024, "Maximum number of goroutines used for search")
+	flagWorkers   = flag.Int("workers", 256, "Maximum number of goroutines used for search")
 
 	flagInputFile = flag.String("input-file", "./data/input.tsv", "Input file to parse")
 	flagDelimiter = flag.String("delimiter", "\t", "Delimiter for input file")
@@ -140,25 +138,12 @@ func main() {
 
 	rows = rows[1:]
 
-	var wg sync.WaitGroup
-	var arr []searchResponse
-
-	wg.Add(len(rows))
-
-	workers := syncutil.NewGate(*flagWorkers)
+	var arr []*searchResponse
 
 	for _, row := range rows {
-		workers.Start()
-		go func(row FileRow) {
-			defer workers.Done()
-			defer wg.Done()
-
-			resp := buildFullSearchResponse(searcher, 1, *flagThreshold, row.Name, row.Email)
-			arr = append(arr, *resp)
-		}(row)
+		resp := buildFullSearchResponse(searcher, 1, *flagThreshold, row.Name, row.Email)
+		arr = append(arr, resp)
 	}
-
-	wg.Wait()
 
 	data, err := json.Marshal(arr)
 

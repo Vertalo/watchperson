@@ -9,7 +9,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"sync"
 	"time"
 )
 
@@ -36,41 +35,20 @@ func (s searchResponse) HashResponse() string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-// searchGather performs an inmem search with *searcher and mutates *searchResponse by setting a specific field
-type searchGather func(searcher *searcher, limit int, minMatch float64, name string, resp *searchResponse)
-
-var (
-	gatherings = []searchGather{
-		// OFAC SDN Search
-		func(s *searcher, limit int, minMatch float64, name string, resp *searchResponse) {
-			sdns := s.FindSDNsByRemarksID(limit, name)
-			if len(sdns) == 0 {
-				resp.SDNs = s.TopSDNs(limit, minMatch, name)
-
-				if len(resp.SDNs) > 0 {
-					resp.Match = &resp.SDNs[0].match
-				}
-			}
-		},
-	}
-)
-
 func buildFullSearchResponse(searcher *searcher, limit int, minMatch float64, name string, email string) *searchResponse {
 	resp := searchResponse{
 		Email:       email,
 		FullName:    name,
 		RefreshedAt: searcher.lastRefreshedAt,
 	}
-	var wg sync.WaitGroup
-	wg.Add(len(gatherings))
-	for i := range gatherings {
-		go func(i int) {
-			gatherings[i](searcher, limit, minMatch, name, &resp)
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
 
+	sdns := searcher.TopSDNs(limit, minMatch, name)
+
+	if len(sdns) > 0 {
+		resp.Match = &sdns[0].match
+	}
+
+	resp.SDNs = sdns
 	resp.Hash = resp.HashResponse()
 
 	return &resp
