@@ -8,8 +8,6 @@ import (
 	"errors"
 	"runtime"
 	"testing"
-
-	"github.com/moov-io/base/log"
 )
 
 func TestSQLite__basic(t *testing.T) {
@@ -25,7 +23,7 @@ func TestSQLite__basic(t *testing.T) {
 	}
 
 	// error case
-	s := sqliteConnection(log.NewNopLogger(), "/tmp/path/doesnt/exist")
+	s := sqliteConnection("/tmp/path/doesnt/exist")
 
 	conn, err := s.Connect()
 	if err == nil {

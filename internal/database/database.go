@@ -7,17 +7,11 @@ package database
 import (
 	"database/sql"
 
-	"github.com/moov-io/base/log"
-
 	"github.com/lopezator/migrator"
 )
 
-func New(logger log.Logger, _type string) (*sql.DB, error) {
-	logger.Logf("looking for %s database provider", _type)
-
-	return sqliteConnection(logger.With(log.Fields{
-		"database": log.String("sqlite"),
-	}), getSqlitePath()).Connect()
+func New(_type string) (*sql.DB, error) {
+	return sqliteConnection(getSqlitePath()).Connect()
 }
 
 func execsql(name, raw string) *migrator.MigrationNoTx {

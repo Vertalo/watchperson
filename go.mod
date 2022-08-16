@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/abadojack/whatlanggo v1.0.1
 	github.com/bbalet/stopwords v1.0.0
-	github.com/go-kit/kit v0.12.0
+	github.com/djherbis/times v1.5.0
 	github.com/lopezator/migrator v0.3.0
 	github.com/mattn/go-sqlite3 v1.14.13
 	github.com/moov-io/base v0.29.2
