@@ -4,20 +4,19 @@ VERSION := $(shell grep -Eo '(v[0-9]+[\.][0-9]+[\.][0-9]+(-[a-zA-Z0-9]*)?)' vers
 .PHONY: build clean
 
 build: clean
-	@go build -o ./bin/server github.com/moov-io/watchman/cmd/server
+	@go mod download
+	@CGO_ENABLED=1 go build -o ./bin/server github.com/moov-io/watchman/cmd/server
 
 start: build
 	@./bin/server
 
-export input=sample.tsv
-export output=sample.json
+export input=input.tsv
+export output=result.json
 export limit=100
 test: build
-	@mkdir -p ./tmp && cp ./data/$(input) ./tmp/$(input)
-	@./bin/server --input-file=./tmp/$(input) --limit-file-rows=$(limit) --output-file=./data/$(output)
-	@cat ./data/$(output) | jq '.[].hash' | sort -u | wc -l
-	@cat ./data/$(output) | jq '.[].hash' | sort -u | wc -l
-
+	@for i in first second; do mkdir -p ./tmp && cp ./data/$(input) ./tmp/$(input) && ./bin/server --input-file=./tmp/$(input) --limit-file-rows=$(limit) --output-file=./data/$(i)-$(output) && cat ./data/$(i)-$(output) | jq '.[].hash' | sort -u > ./data/$(i)-hashes.txt; done
+	@diff ./data/first-hashes.txt ./data/second-hashes.txt
+	
 .PHONY: clean
 clean:
 ifeq ($(OS),Windows_NT)

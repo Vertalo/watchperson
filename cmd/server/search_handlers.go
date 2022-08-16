@@ -61,7 +61,7 @@ func buildFullSearchResponse(searcher *searcher, limit int, minMatch float64, na
 
 	// Remove all values lower than topMatch
 	for i, sdn := range sdns {
-		if sdn.match < topMatch {
+		if sdn.match >= topMatch {
 			resp.SDNs = append(resp.SDNs, sdns[i+1:]...)
 		}
 	}
