@@ -27,9 +27,10 @@ var (
 	flagMaxProcs  = flag.Int("max-procs", runtime.NumCPU(), "Maximum number of CPUs used for search and endpoints")
 	flagWorkers   = flag.Int("workers", 256, "Maximum number of goroutines used for search")
 
-	flagInputFile = flag.String("input-file", "./data/input.tsv", "Input file to parse")
-	flagDelimiter = flag.String("delimiter", "\t", "Delimiter for input file")
-	flagThreshold = flag.Float64("threshold", .90, "Threshold for similarity")
+	flagInputFile     = flag.String("input-file", "./data/input.tsv", "Input file to parse")
+	flagDelimiter     = flag.String("delimiter", "\t", "Delimiter for input file")
+	flagThreshold     = flag.Float64("threshold", .90, "Threshold for similarity")
+	flagSearchResults = flag.Int("search-results", 100, "Number of search results to return at most")
 
 	dataRefreshInterval = 1 * time.Hour
 )
@@ -141,7 +142,7 @@ func main() {
 	var arr []*searchResponse
 
 	for _, row := range rows {
-		resp := buildFullSearchResponse(searcher, 1, *flagThreshold, row.Name, row.Email)
+		resp := buildFullSearchResponse(searcher, *flagSearchResults, *flagThreshold, row.Name, row.Email)
 		arr = append(arr, resp)
 	}
 
