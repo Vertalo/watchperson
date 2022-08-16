@@ -32,3 +32,4 @@ webui/node_modules/
 
 .vscode/
 data/
+tmp/

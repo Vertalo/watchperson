@@ -7,19 +7,15 @@ package database
 import (
 	"errors"
 	"testing"
-
-	"github.com/moov-io/base/log"
 )
 
 func TestDatabase(t *testing.T) {
-	logger := log.NewNopLogger()
-
-	db, err := New(logger, "other")
+	db, err := New("other")
 	if db != nil || err == nil {
 		t.Errorf("db=%#v expected error", db)
 	}
 
-	db, err = New(logger, "sqlite")
+	db, err = New("sqlite")
 	if db == nil || err != nil {
 		t.Errorf("sqlite never errors on initial Connect")
 	}

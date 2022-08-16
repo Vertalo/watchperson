@@ -11,26 +11,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
-	"time"
 
-	"github.com/moov-io/base/log"
-
-	kitprom "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/lopezator/migrator"
 	"github.com/mattn/go-sqlite3"
-	stdprom "github.com/prometheus/client_golang/prometheus"
 )
 
 var (
-	sqliteConnections = kitprom.NewGaugeFrom(stdprom.GaugeOpts{
-		Name: "sqlite_connections",
-		Help: "How many sqlite connections and what status they're in.",
-	}, []string{"state"})
-
-	sqliteVersionLogOnce sync.Once
-
 	sqliteMigrations = migrator.Migrations(
 		execsql(
 			"create_customer_name_watches",
@@ -85,23 +72,13 @@ var (
 
 type sqlite struct {
 	path string
-
-	connections *kitprom.Gauge
-	logger      log.Logger
-
-	err error
+	err  error
 }
 
 func (s *sqlite) Connect() (*sql.DB, error) {
 	if s.err != nil {
 		return nil, fmt.Errorf("sqlite had error %v", s.err)
 	}
-
-	sqliteVersionLogOnce.Do(func() {
-		if v, _, _ := sqlite3.Version(); v != "" {
-			s.logger.Logf("sqlite version %s", v)
-		}
-	})
 
 	db, err := sql.Open("sqlite3", s.path)
 	if err != nil {
@@ -120,25 +97,12 @@ func (s *sqlite) Connect() (*sql.DB, error) {
 		}
 	}
 
-	// Spin up metrics only after everything works
-	go func() {
-		t := time.NewTicker(1 * time.Second)
-		for range t.C {
-			stats := db.Stats()
-			s.connections.With("state", "idle").Set(float64(stats.Idle))
-			s.connections.With("state", "inuse").Set(float64(stats.InUse))
-			s.connections.With("state", "open").Set(float64(stats.OpenConnections))
-		}
-	}()
-
 	return db, err
 }
 
-func sqliteConnection(logger log.Logger, path string) *sqlite {
+func sqliteConnection(path string) *sqlite {
 	return &sqlite{
-		path:        path,
-		logger:      logger,
-		connections: sqliteConnections,
+		path: path,
 	}
 }
 
@@ -177,7 +141,7 @@ func CreateTestSqliteDB(t *testing.T) *TestSQLiteDB {
 		t.Fatalf("sqlite test: %v", err)
 	}
 
-	db, err := sqliteConnection(log.NewNopLogger(), filepath.Join(dir, "watchman.db")).Connect()
+	db, err := sqliteConnection(filepath.Join(dir, "watchman.db")).Connect()
 	if err != nil {
 		t.Fatalf("sqlite test: %v", err)
 	}

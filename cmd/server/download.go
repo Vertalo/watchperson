@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/moov-io/base/log"
@@ -18,6 +19,7 @@ import (
 	"github.com/moov-io/watchman/pkg/dpl"
 	"github.com/moov-io/watchman/pkg/ofac"
 
+	"github.com/djherbis/times"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -208,39 +210,33 @@ func (s *searcher) refreshData(initialDir string) (*DownloadStats, error) {
 	adds := precomputeAddresses(results.Addresses)
 	alts := precomputeAlts(results.AlternateIdentities, s.pipe)
 
-	deniedPersons, err := dplRecords(s.logger, initialDir)
-	if err != nil {
-		lastDataRefreshFailure.WithLabelValues("DPs").Set(float64(time.Now().Unix()))
-		stats.Errors = append(stats.Errors, fmt.Errorf("DPL: %v", err))
-	}
-	dps := precomputeDPs(deniedPersons, s.pipe)
-
-	consolidatedLists, err := cslRecords(s.logger, initialDir)
-	if err != nil {
-		lastDataRefreshFailure.WithLabelValues("CSL").Set(float64(time.Now().Unix()))
-		stats.Errors = append(stats.Errors, fmt.Errorf("CSL: %v", err))
-	}
-	els := precomputeCSLEntities(consolidatedLists.ELs, s.pipe)
-	meus := precomputeCSLEntities(consolidatedLists.MEUs, s.pipe)
-	ssis := precomputeCSLEntities(consolidatedLists.SSIs, s.pipe)
+	// deniedPersons, err := dplRecords(s.logger, initialDir)
+	// if err != nil {
+	// 	lastDataRefreshFailure.WithLabelValues("DPs").Set(float64(time.Now().Unix()))
+	// 	stats.Errors = append(stats.Errors, fmt.Errorf("DPL: %v", err))
+	// }
+	// dps := precomputeDPs(deniedPersons, s.pipe)
+	// els := precomputeCSLEntities(consolidatedLists.ELs, s.pipe)
+	// meus := precomputeCSLEntities(consolidatedLists.MEUs, s.pipe)
+	// ssis := precomputeCSLEntities(consolidatedLists.SSIs, s.pipe)
 
 	// OFAC
 	stats.SDNs = len(sdns)
 	stats.Alts = len(alts)
 	stats.Addresses = len(adds)
 	// BIS
-	stats.DeniedPersons = len(dps)
+	// stats.DeniedPersons = len(dps)
 	// CSL
-	stats.BISEntities = len(els)
-	stats.MilitaryEndUsers = len(meus)
-	stats.SectoralSanctions = len(ssis)
+	// stats.BISEntities = len(els)
+	// stats.MilitaryEndUsers = len(meus)
+	// stats.SectoralSanctions = len(ssis)
 
 	// record prometheus metrics
-	lastDataRefreshCount.WithLabelValues("SDNs").Set(float64(len(sdns)))
-	lastDataRefreshCount.WithLabelValues("SSIs").Set(float64(len(ssis)))
-	lastDataRefreshCount.WithLabelValues("BISEntities").Set(float64(len(els)))
-	lastDataRefreshCount.WithLabelValues("MilitaryEndUsers").Set(float64(len(meus)))
-	lastDataRefreshCount.WithLabelValues("DPs").Set(float64(len(dps)))
+	// lastDataRefreshCount.WithLabelValues("SDNs").Set(float64(len(sdns)))
+	// lastDataRefreshCount.WithLabelValues("SSIs").Set(float64(len(ssis)))
+	// lastDataRefreshCount.WithLabelValues("BISEntities").Set(float64(len(els)))
+	// lastDataRefreshCount.WithLabelValues("MilitaryEndUsers").Set(float64(len(meus)))
+	// lastDataRefreshCount.WithLabelValues("DPs").Set(float64(len(dps)))
 
 	if len(stats.Errors) > 0 {
 		return stats, stats
@@ -253,11 +249,11 @@ func (s *searcher) refreshData(initialDir string) (*DownloadStats, error) {
 	s.Addresses = adds
 	s.Alts = alts
 	// BIS
-	s.DPs = dps
+	// s.DPs = dps
 	// CSL
-	s.BISEntities = els
-	s.MilitaryEndUsers = meus
-	s.SSIs = ssis
+	//s.BISEntities = els
+	//s.MilitaryEndUsers = meus
+	//s.SSIs = ssis
 	// metadata
 	s.lastRefreshedAt = stats.RefreshedAt
 	s.Unlock()
@@ -272,36 +268,20 @@ func (s *searcher) refreshData(initialDir string) (*DownloadStats, error) {
 	return stats, nil
 }
 
-// lastRefresh returns a time.Time for the oldest file in dir or the current time if empty.
 func lastRefresh(dir string) time.Time {
-	if dir == "" {
-		return time.Now().In(time.UTC)
-	}
+	lastRefreshed := time.Now().Add(-time.Hour * 24)
 
-	infos, err := os.ReadDir(dir)
-	if len(infos) == 0 || err != nil {
-		return time.Time{} // zero time because there's no initial data
-	}
-
-	fileInfo, err := infos[0].Info()
-
-	if err != nil {
-		return time.Now() // zero time because there's no initial data
-	}
-
-	oldest := fileInfo.ModTime()
-	for i := range infos[1:] {
-		fileInfo, err = infos[i].Info()
-
-		if err != nil {
-			continue
-		}
-
-		if t := fileInfo.ModTime(); t.Before(oldest) {
-			oldest = t
+	wd, _ := os.Getwd()
+	watchmanDB := filepath.Join(wd, "watchman.db")
+	log.NewDefaultLogger().Logf("Checking for watchman DB at %s", watchmanDB)
+	if _, err := os.Stat(watchmanDB); err == nil {
+		fileinfo, err := times.Stat(watchmanDB)
+		if err == nil && fileinfo.HasBirthTime() {
+			lastRefreshed = fileinfo.BirthTime()
 		}
 	}
-	return oldest.In(time.UTC)
+
+	return lastRefreshed
 }
 
 type downloadRepository interface {

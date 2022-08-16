@@ -9,6 +9,8 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"sort"
+	"strconv"
 	"time"
 )
 
@@ -35,6 +37,18 @@ func (s searchResponse) HashResponse() string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
+func findTopMatchValue(sdns []*SDN) float64 {
+	var topMatch float64
+
+	for _, sdn := range sdns {
+		if sdn.match > topMatch {
+			topMatch = sdn.match
+		}
+	}
+
+	return topMatch
+}
+
 func buildFullSearchResponse(searcher *searcher, limit int, minMatch float64, name string, email string) *searchResponse {
 	resp := searchResponse{
 		Email:       email,
@@ -43,11 +57,22 @@ func buildFullSearchResponse(searcher *searcher, limit int, minMatch float64, na
 	}
 
 	sdns := searcher.TopSDNs(limit, minMatch, name)
+	topMatch := findTopMatchValue(sdns)
 
-	if len(sdns) > 0 {
-		resp.Match = &sdns[0].match
+	// Remove all values lower than topMatch
+	for i, sdn := range sdns {
+		if sdn.match < topMatch {
+			resp.SDNs = append(resp.SDNs, sdns[i+1:]...)
+		}
 	}
 
+	sort.Slice(resp.SDNs, func(i, j int) bool {
+		x, _ := strconv.Atoi(resp.SDNs[i].id)
+		y, _ := strconv.Atoi(resp.SDNs[j].id)
+		return x < y
+	})
+
+	resp.Match = &topMatch
 	resp.SDNs = sdns
 	resp.Hash = resp.HashResponse()
 

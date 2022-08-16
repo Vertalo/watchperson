@@ -23,14 +23,15 @@ import (
 )
 
 var (
-	flagLogFormat = flag.String("log.format", "", "Format for log lines (Options: json, plain")
-	flagMaxProcs  = flag.Int("max-procs", runtime.NumCPU(), "Maximum number of CPUs used for search and endpoints")
-	flagWorkers   = flag.Int("workers", 256, "Maximum number of goroutines used for search")
+	flagMaxProcs = flag.Int("max-procs", runtime.NumCPU(), "Maximum number of CPUs used for search and endpoints")
+	flagWorkers  = flag.Int("workers", 1024, "Maximum number of goroutines used for search")
 
 	flagInputFile     = flag.String("input-file", "./data/input.tsv", "Input file to parse")
+	flagOutputFile    = flag.String("output-file", "./data/output.json", "Output file to write")
 	flagDelimiter     = flag.String("delimiter", "\t", "Delimiter for input file")
-	flagThreshold     = flag.Float64("threshold", .90, "Threshold for similarity")
-	flagSearchResults = flag.Int("search-results", 100, "Number of search results to return at most")
+	flagThreshold     = flag.Float64("threshold", .95, "Threshold for similarity")
+	flagSearchResults = flag.Int("search-results", 1000, "Number of search results to return at most")
+	flagLimitFileRows = flag.Int("limit-file-rows", 0, "Limit the number of rows in the input file")
 
 	dataRefreshInterval = 1 * time.Hour
 )
@@ -43,18 +44,9 @@ type FileRow struct {
 
 func main() {
 	flag.Parse()
-
 	runtime.GOMAXPROCS(*flagMaxProcs)
 
-	var logger log.Logger
-	if v := os.Getenv("LOG_FORMAT"); v != "" {
-		*flagLogFormat = v
-	}
-	if strings.ToLower(*flagLogFormat) == "json" {
-		logger = log.NewJSONLogger()
-	} else {
-		logger = log.NewDefaultLogger()
-	}
+	logger := log.NewDefaultLogger()
 
 	if v := os.Getenv("THRESHOLD"); v != "" && !flagPassed("threshold") {
 		threshold, err := strconv.ParseFloat(v, 64)
@@ -74,7 +66,7 @@ func main() {
 	}()
 
 	// Setup database connection
-	db, err := database.New(logger, os.Getenv("DATABASE_TYPE"))
+	db, err := database.New(os.Getenv("DATABASE_TYPE"))
 	if err != nil {
 		logger.Logf("database problem: %v", err)
 		os.Exit(1)
@@ -107,12 +99,9 @@ func main() {
 			os.Exit(1)
 		}
 		logger.Info().With(log.Fields{
-			"SDNs":        log.Int(stats.SDNs),
-			"AltNames":    log.Int(stats.Alts),
-			"Addresses":   log.Int(stats.Addresses),
-			"SSI":         log.Int(stats.SectoralSanctions),
-			"DPL":         log.Int(stats.DeniedPersons),
-			"BISEntities": log.Int(stats.BISEntities),
+			"SDNs":      log.Int(stats.SDNs),
+			"AltNames":  log.Int(stats.Alts),
+			"Addresses": log.Int(stats.Addresses),
 		}).Logf("data refreshed %v ago", time.Since(stats.RefreshedAt))
 	}
 
@@ -123,6 +112,7 @@ func main() {
 	// Setup periodic download and re-search
 	updates := make(chan *DownloadStats)
 	dataRefreshInterval = getDataRefreshInterval(logger, os.Getenv("DATA_REFRESH_INTERVAL"))
+	logger.Debug().Logf("data refresh interval: %v", dataRefreshInterval)
 	go searcher.periodicDataRefresh(dataRefreshInterval, downloadRepo, updates)
 
 	// Parse input file
@@ -138,6 +128,10 @@ func main() {
 	}
 
 	rows = rows[1:]
+
+	if *flagLimitFileRows > 0 {
+		rows = rows[:*flagLimitFileRows]
+	}
 
 	var arr []*searchResponse
 
@@ -158,6 +152,14 @@ func main() {
 	}
 
 	fmt.Printf("%s", data)
+
+	if err := os.Truncate(*flagOutputFile, 0); err != nil {
+		logger.LogErrorf("ERROR: failed to truncate output file: %v", err)
+	}
+
+	if err := os.WriteFile(*flagOutputFile, data, 0644); err != nil {
+		logger.LogErrorf("ERROR: failed to write output file: %v", err)
+	}
 }
 
 // getDataRefreshInterval returns a time.Duration for how often OFAC should refresh data
