@@ -14,7 +14,6 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -23,17 +22,15 @@ import (
 )
 
 var (
-	flagMaxProcs = flag.Int("max-procs", runtime.NumCPU(), "Maximum number of CPUs used for search and endpoints")
-	flagWorkers  = flag.Int("workers", 1024, "Maximum number of goroutines used for search")
+	flagWorkers = flag.Int("workers", runtime.NumCPU(), "Maximum number of goroutines used for search")
 
 	flagInputFile     = flag.String("input-file", "./data/input.tsv", "Input file to parse")
 	flagOutputFile    = flag.String("output-file", "./data/output.json", "Output file to write")
 	flagDelimiter     = flag.String("delimiter", "\t", "Delimiter for input file")
 	flagThreshold     = flag.Float64("threshold", .95, "Threshold for similarity")
-	flagSearchResults = flag.Int("search-results", 1000, "Number of search results to return at most")
+	flagSearchResults = flag.Int("search-results", 100, "Number of search results to return at most")
 	flagLimitFileRows = flag.Int("limit-file-rows", 0, "Limit the number of rows in the input file")
-
-	dataRefreshInterval = 1 * time.Hour
+	flagDataDirectory = flag.String("data-directory", "", "Directory to download data to")
 )
 
 type FileRow struct {
@@ -44,8 +41,6 @@ type FileRow struct {
 
 func main() {
 	flag.Parse()
-	runtime.GOMAXPROCS(*flagMaxProcs)
-
 	logger := log.NewDefaultLogger()
 
 	if v := os.Getenv("THRESHOLD"); v != "" && !flagPassed("threshold") {
@@ -54,6 +49,18 @@ func main() {
 			logger.LogErrorf("invalid THRESHOLD: %v", err)
 		}
 		*flagThreshold = threshold
+	}
+
+	lastRefreshed := lastRefresh()
+	if time.Since(lastRefreshed) > (time.Hour * 12) {
+		logger.Logf("last refresh was %v ago, refreshing data", time.Since(lastRefreshed))
+		if err := os.Remove("./watchman.db"); err != nil {
+			logger.LogErrorf("error removing watchman.db: %v", err)
+		}
+	}
+
+	if v := os.Getenv("INITIAL_DATA_DIRECTORY"); v != "" && !flagPassed("data-directory") {
+		*flagDataDirectory = v
 	}
 
 	// Channel for errors
@@ -90,14 +97,10 @@ func main() {
 	searcher := newSearcher(logger, pipeline, *flagWorkers)
 
 	// Initial download of data
-	if stats, err := searcher.refreshData(os.Getenv("INITIAL_DATA_DIRECTORY")); err != nil {
+	if stats, err := searcher.refreshData(*flagDataDirectory); err != nil {
 		logger.LogErrorf("ERROR: failed to download/parse initial data: %v", err)
 		os.Exit(1)
 	} else {
-		if err := downloadRepo.recordStats(stats); err != nil {
-			logger.LogErrorf("ERROR: failed to record download stats: %v", err)
-			os.Exit(1)
-		}
 		logger.Info().With(log.Fields{
 			"SDNs":      log.Int(stats.SDNs),
 			"AltNames":  log.Int(stats.Alts),
@@ -108,12 +111,6 @@ func main() {
 	// Setup company / customer repositories
 	custRepo := &sqliteCustomerRepository{db, logger}
 	defer custRepo.close()
-
-	// Setup periodic download and re-search
-	updates := make(chan *DownloadStats)
-	dataRefreshInterval = getDataRefreshInterval(logger, os.Getenv("DATA_REFRESH_INTERVAL"))
-	logger.Debug().Logf("data refresh interval: %v", dataRefreshInterval)
-	go searcher.periodicDataRefresh(dataRefreshInterval, downloadRepo, updates)
 
 	// Parse input file
 	rows, err := parseFile(*flagInputFile, *flagDelimiter)
@@ -146,35 +143,13 @@ func main() {
 		logger.LogErrorf("ERROR: failed to marshal search results: %v", err)
 	}
 
-	// Remove downloaded data
-	if err = os.RemoveAll(os.Getenv("INITIAL_DATA_DIRECTORY")); err != nil {
-		logger.LogErrorf("ERROR: failed to remove downloaded data: %v", err)
-	}
-
 	fmt.Printf("%s", data)
-
-	if err := os.Truncate(*flagOutputFile, 0); err != nil {
-		logger.LogErrorf("ERROR: failed to truncate output file: %v", err)
-	}
 
 	if err := os.WriteFile(*flagOutputFile, data, 0644); err != nil {
 		logger.LogErrorf("ERROR: failed to write output file: %v", err)
 	}
-}
 
-// getDataRefreshInterval returns a time.Duration for how often OFAC should refresh data
-func getDataRefreshInterval(logger log.Logger, env string) time.Duration {
-	if env != "" {
-		if strings.EqualFold(env, "off") {
-			return 0 * time.Second
-		}
-		if dur, _ := time.ParseDuration(env); dur > 0 {
-			logger.Logf("Setting data refresh interval to %v", dur)
-			return dur
-		}
-	}
-	logger.Logf("Setting data refresh interval to %v (default)", dataRefreshInterval)
-	return dataRefreshInterval
+	os.RemoveAll(*flagDataDirectory)
 }
 
 func flagPassed(name string) bool {

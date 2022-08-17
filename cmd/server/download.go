@@ -195,7 +195,7 @@ func (s *searcher) refreshData(initialDir string) (*DownloadStats, error) {
 	}
 
 	stats := &DownloadStats{
-		RefreshedAt: lastRefresh(initialDir),
+		RefreshedAt: time.Now(),
 	}
 
 	lastDataRefreshFailure.WithLabelValues("SDNs").Set(float64(time.Now().Unix()))
@@ -268,7 +268,7 @@ func (s *searcher) refreshData(initialDir string) (*DownloadStats, error) {
 	return stats, nil
 }
 
-func lastRefresh(dir string) time.Time {
+func lastRefresh() time.Time {
 	lastRefreshed := time.Now().Add(-time.Hour * 24)
 
 	wd, _ := os.Getwd()

@@ -1,25 +1,27 @@
 PLATFORM=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 VERSION := $(shell grep -Eo '(v[0-9]+[\.][0-9]+[\.][0-9]+(-[a-zA-Z0-9]*)?)' version.go)
+TEST_ITERATIONS := "first" "second"
 
 .PHONY: build clean
 
 build: clean
+	@rm -rf ./bin ./data/*.txt ./data/*.json
 	@CGO_ENABLED=1 go build -o ./bin/server github.com/moov-io/watchman/cmd/server
 
 start: build
 	@./bin/server
 
-export input=input.tsv
-export output=result.json
-export limit=100
+test: export input="input.tsv"
+test: export output="result.json"
+test: export data_directory="./tmp/data"
+test: export limit=100
 test: build
-	@for i in first second; do \
-		mkdir -p ./tmp && \
-		cp ./data/$(input) ./tmp/$(input) && \
-		./bin/server --input-file=./tmp/$(input) --limit-file-rows=$(limit) --output-file=./data/$$i-$(output) && \
-		cat ./data/$$i-$(output) | jq '.[].hash' | sort -u > ./data/$$i-hashes.txt; \
+	@for word in $(TEST_ITERATIONS); do \
+		mkdir -p "${data_directory}" && \
+		cp "./data/$(input)" "./tmp/$(input)" && \
+		./bin/server --input-file="./tmp/${input}" --output-file="./data/$$word-${output}" --data-directory="${data_directory}" --limit-file-rows=$(limit) && \
+		cat "./data/$$word-${output}" | jq '.[].hash' | sort -u > "./data/$$word-hashes.txt"; \
 	done
-	@diff -s ./data/first-hashes.txt ./data/second-hashes.txt
 	
 .PHONY: clean
 clean:
