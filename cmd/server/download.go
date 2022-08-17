@@ -195,7 +195,7 @@ func (s *searcher) refreshData(initialDir string) (*DownloadStats, error) {
 	}
 
 	stats := &DownloadStats{
-		RefreshedAt: lastRefresh(initialDir),
+		RefreshedAt: time.Now(),
 	}
 
 	lastDataRefreshFailure.WithLabelValues("SDNs").Set(float64(time.Now().Unix()))
@@ -268,11 +268,11 @@ func (s *searcher) refreshData(initialDir string) (*DownloadStats, error) {
 	return stats, nil
 }
 
-func lastRefresh(dir string) time.Time {
+func lastRefresh(filename string) time.Time {
 	lastRefreshed := time.Now().Add(-time.Hour * 24)
 
 	wd, _ := os.Getwd()
-	watchmanDB := filepath.Join(wd, "watchman.db")
+	watchmanDB := filepath.Join(wd, filename)
 	log.NewDefaultLogger().Logf("Checking for watchman DB at %s", watchmanDB)
 	if _, err := os.Stat(watchmanDB); err == nil {
 		fileinfo, err := times.Stat(watchmanDB)
