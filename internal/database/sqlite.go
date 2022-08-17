@@ -88,8 +88,14 @@ func (s *sqlite) Connect() (*sql.DB, error) {
 		return db, err
 	}
 
+	logger := migrator.WithLogger(migrator.LoggerFunc(func(message string, args ...interface{}) {
+		for _, a := range args {
+			fmt.Fprintf(os.Stderr, "migration: %v\n", a)
+		}
+	}))
+
 	// Migrate our database
-	if m, err := migrator.New(sqliteMigrations); err != nil {
+	if m, err := migrator.New(sqliteMigrations, logger); err != nil {
 		return db, err
 	} else {
 		if err := m.Migrate(db); err != nil {
