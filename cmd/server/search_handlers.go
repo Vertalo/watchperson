@@ -67,8 +67,8 @@ func buildFullSearchResponse(searcher *searcher, limit int, minMatch float64, na
 	}
 
 	sort.Slice(resp.SDNs, func(i, j int) bool {
-		x, _ := strconv.Atoi(resp.SDNs[i].id)
-		y, _ := strconv.Atoi(resp.SDNs[j].id)
+		x, _ := strconv.Atoi(resp.SDNs[i].EntityID)
+		y, _ := strconv.Atoi(resp.SDNs[j].EntityID)
 		return x < y
 	})
 
