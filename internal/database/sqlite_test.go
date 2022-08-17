@@ -44,7 +44,7 @@ func TestSQLite__basic(t *testing.T) {
 }
 
 func TestSqlite__getSqlitePath(t *testing.T) {
-	if v := getSqlitePath(); v != "watchman.db" {
+	if v := getSqlitePath("watchman.db"); v != "watchman.db" {
 		t.Errorf("got %s", v)
 	}
 }

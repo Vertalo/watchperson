@@ -112,8 +112,7 @@ func sqliteConnection(path string) *sqlite {
 	}
 }
 
-func getSqlitePath() string {
-	path := os.Getenv("SQLITE_DB_PATH")
+func getSqlitePath(path string) string {
 	if path == "" || strings.Contains(path, "..") {
 		// set default if empty or trying to escape
 		// don't filepath.ABS to avoid full-fs reads
