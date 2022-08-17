@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -56,16 +57,16 @@ func main() {
 		*flagSqliteFile = v
 	}
 
+	if v := os.Getenv("INITIAL_DATA_DIRECTORY"); v != "" && !flagPassed("data-directory") {
+		*flagDataDirectory = v
+	}
+
 	lastRefreshed := lastRefresh(*flagSqliteFile)
 	if time.Since(lastRefreshed) > (time.Hour * 12) {
 		logger.Logf("last refresh was %v ago, refreshing data", time.Since(lastRefreshed))
 		if err := os.Remove(*flagSqliteFile); err != nil {
 			logger.LogErrorf("error removing %s: %v", *flagSqliteFile, err)
 		}
-	}
-
-	if v := os.Getenv("INITIAL_DATA_DIRECTORY"); v != "" && !flagPassed("data-directory") {
-		*flagDataDirectory = v
 	}
 
 	// Channel for errors
@@ -78,7 +79,7 @@ func main() {
 	}()
 
 	// Setup database connection
-	db, err := database.New(os.Getenv("DATABASE_TYPE"))
+	db, err := database.New(os.Getenv("DATABASE_TYPE"), *flagSqliteFile)
 	if err != nil {
 		logger.Logf("database problem: %v", err)
 		os.Exit(1)
@@ -154,7 +155,18 @@ func main() {
 		logger.LogErrorf("ERROR: failed to write output file: %v", err)
 	}
 
-	os.RemoveAll(*flagDataDirectory)
+	// Clean up the passed in data directory without removing the dir itself
+	if *flagDataDirectory != "" {
+		files, err := os.ReadDir(*flagDataDirectory)
+		if err != nil {
+			logger.LogErrorf("ERROR: failed to read data directory: %v", err)
+		}
+		for _, file := range files {
+			if err := os.Remove(filepath.Join(*flagDataDirectory, file.Name())); err != nil {
+				logger.LogErrorf("ERROR: failed to remove file: %v", err)
+			}
+		}
+	}
 }
 
 func flagPassed(name string) bool {

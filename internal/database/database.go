@@ -10,8 +10,8 @@ import (
 	"github.com/lopezator/migrator"
 )
 
-func New(_type string) (*sql.DB, error) {
-	return sqliteConnection(getSqlitePath()).Connect()
+func New(_type, path string) (*sql.DB, error) {
+	return sqliteConnection(getSqlitePath(path)).Connect()
 }
 
 func execsql(name, raw string) *migrator.MigrationNoTx {

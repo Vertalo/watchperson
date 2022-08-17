@@ -10,12 +10,12 @@ import (
 )
 
 func TestDatabase(t *testing.T) {
-	db, err := New("other")
+	db, err := New("other", "watchman.db")
 	if db != nil || err == nil {
 		t.Errorf("db=%#v expected error", db)
 	}
 
-	db, err = New("sqlite")
+	db, err = New("sqlite", "watchman.db")
 	if db == nil || err != nil {
 		t.Errorf("sqlite never errors on initial Connect")
 	}
