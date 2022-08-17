@@ -14,12 +14,13 @@ start: build
 test: export input="input.tsv"
 test: export output="result.json"
 test: export data_directory="./tmp/data"
+test: export sqlite_path="watchman_test.db"
 test: export limit=100
 test: build
 	@for word in $(TEST_ITERATIONS); do \
 		mkdir -p "${data_directory}" && \
 		cp "./data/$(input)" "./tmp/$(input)" && \
-		./bin/server --input-file="./tmp/${input}" --output-file="./data/$$word-${output}" --data-directory="${data_directory}" --limit-file-rows=$(limit) && \
+		./bin/server --input-file="./tmp/${input}" --output-file="./data/$$word-${output}" --data-directory="${data_directory}" --limit-file-rows=$(limit) --sqlite-db-path="${sqlite_path}" && \
 		cat "./data/$$word-${output}" | jq '.[].hash' | sort -u > "./data/$$word-hashes.txt"; \
 	done
 	

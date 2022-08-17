@@ -22,15 +22,16 @@ import (
 )
 
 var (
-	flagWorkers = flag.Int("workers", runtime.NumCPU(), "Maximum number of goroutines used for search")
+	flagWorkers = flag.Int("workers", runtime.NumCPU()-1, "Maximum number of goroutines used for search")
 
 	flagInputFile     = flag.String("input-file", "./data/input.tsv", "Input file to parse")
 	flagOutputFile    = flag.String("output-file", "./data/output.json", "Output file to write")
 	flagDelimiter     = flag.String("delimiter", "\t", "Delimiter for input file")
 	flagThreshold     = flag.Float64("threshold", .95, "Threshold for similarity")
-	flagSearchResults = flag.Int("search-results", 100, "Number of search results to return at most")
+	flagSearchResults = flag.Int("search-results", 1000, "Number of search results to return at most")
 	flagLimitFileRows = flag.Int("limit-file-rows", 0, "Limit the number of rows in the input file")
 	flagDataDirectory = flag.String("data-directory", "", "Directory to download data to")
+	flagSqliteFile    = flag.String("sqlite-db-path", "watchman.db", "Sqlite file to use")
 )
 
 type FileRow struct {
@@ -51,11 +52,15 @@ func main() {
 		*flagThreshold = threshold
 	}
 
-	lastRefreshed := lastRefresh()
+	if v := os.Getenv("SQLITE_DB_PATH"); v != "" && !flagPassed("sqlite-db-path") {
+		*flagSqliteFile = v
+	}
+
+	lastRefreshed := lastRefresh(*flagSqliteFile)
 	if time.Since(lastRefreshed) > (time.Hour * 12) {
 		logger.Logf("last refresh was %v ago, refreshing data", time.Since(lastRefreshed))
-		if err := os.Remove("./watchman.db"); err != nil {
-			logger.LogErrorf("error removing watchman.db: %v", err)
+		if err := os.Remove(*flagSqliteFile); err != nil {
+			logger.LogErrorf("error removing %s: %v", *flagSqliteFile, err)
 		}
 	}
 
