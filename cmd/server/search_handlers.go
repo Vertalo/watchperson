@@ -72,7 +72,11 @@ func buildFullSearchResponse(searcher *searcher, limit int, minMatch float64, na
 		return x < y
 	})
 
-	resp.Match = &topMatch
+	var multiplier float64 = 100.0
+	match := topMatch * multiplier
+
+	// Convert the match percentage decimal to scale from 0 to 100
+	resp.Match = &match
 	resp.Hash = resp.HashResponse()
 
 	return &resp
