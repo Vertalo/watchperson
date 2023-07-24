@@ -30,3 +30,7 @@ ifeq ($(OS),Windows_NT)
 else
 	@rm -rf ./bin
 endif
+
+ifneq (,$(wildcard Makefile.gather))
+include Makefile.gather
+endif

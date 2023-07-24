@@ -1,0 +1,41 @@
+.BEGIN:
+	echo "This Makefile requires gmake"
+	exit 100
+
+.PHONY: setup gather reqs schema gather serve clean
+
+MAKEFLAGS += -s -r -R --no-print-directory
+
+# Default values for setup and gather targets
+verbose ?=
+mkdocs_dir ?= mkdocs-docs
+python ?= python
+pip ?= pip
+
+verbose_flag != if [ -z "$(verbose)" ]; \
+	then echo ""; \
+	else echo " -v"; fi
+
+help:
+	@echo "Makefile targets:"
+	@echo "  help    - Show this help message."
+	@echo "  schema  - Create a JSON file containing a list of docs files to process"
+	@echo "  gather  - Create mkdocs-docs folder, gather /docs and .md files"
+	@echo "  serve   - Start the mkdocs dev server"
+	@echo "  clean   - Remove the mkdocs-docs server"
+
+docslist:
+	$(PYTHON) ./scripts/docslist.py
+
+# Build mkdocs-docs from JSON schema created above
+gather:
+	$(MAKE) clean
+	mkdir -p '$(mkdocs_dir)'
+	$(MAKE) docslist | pax -r -w '$(mkdocs_dir)'
+
+serve:
+	mkdocs serve
+
+clean:
+	rm -rf '$(mkdocs_dir)'
+
