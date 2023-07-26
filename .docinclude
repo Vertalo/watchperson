@@ -1,0 +1,51 @@
+# This is a configuration file for using `.gitignore`-style path matching
+# to glob the paths of documentation artifacts from within a repo in order
+# to gather them and serve them locally. This brings the documentation
+# closer to the code and will allow devs to edit and preview a repo's docs
+# without pushing and re-deploying `internal.vertalo.com`. This
+# methodology will also be used by `internal.vertalo.com` to injest repo
+# documentation during the building of that project.
+
+# We are using a Python package called `pathspec` that implements the
+# `.gitignore` syntax. It is used in the root-level `gather` executable
+# file.
+
+# Note that, while we're using the same path-matching syntax as
+# `gitignore`, we're using it to decide what to *include* in doc
+# gather, serving, and injestion vs. `gitignore`'s *ignoring* methodology.
+
+# See: [https://git-scm.com/docs/gitignore](https://git-scm.com/docs/gitignore)
+
+# The following will match `docs` directories and their contents along
+# with any other extraneous `.md` files (excluding files named `chris.md`)
+# while excluding from certain directories including the `mkdocs-docs`
+# directory (where the documentation will be gathered), virtual
+# environments, and other Python-related cache-type directories.
+
+# Include all docs directories and their contents, plus other markdown files
+**/docs/*
+**/*.md
+
+# Exclude markdown files called `contentious_consensus.md`
+!contentious_consensus.md
+
+# Other files to exclude
+!.DS_Store
+
+# Exclude contents of certain directories including the document target (mkdocs-docs)
+# and other Python-related directories
+!mkdocs-docs/
+!__pycache__
+!.ipynb_checkpoints/
+
+# Exclude files and directories related to virtual environments and env vars
+!.env
+!.venv
+!env/
+!venv/
+!ENV/
+!env.bak/
+!venv.bak/
+!.docinclude
+!.gitignore
+!.git/

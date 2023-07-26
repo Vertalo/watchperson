@@ -1,9 +1,3 @@
-.BEGIN:
-	echo "This Makefile requires gmake"
-	exit 100
-
-.PHONY: setup gather reqs schema gather serve clean
-
 MAKEFLAGS += -s -r -R --no-print-directory
 
 # Default values for setup and gather targets
@@ -16,13 +10,14 @@ verbose_flag != if [ -z "$(verbose)" ]; \
 	then echo ""; \
 	else echo " -v"; fi
 
-help:
-	@echo "Makefile targets:"
-	@echo "  help    - Show this help message."
-	@echo "  schema  - Create a JSON file containing a list of docs files to process"
-	@echo "  gather  - Create mkdocs-docs folder, gather /docs and .md files"
-	@echo "  serve   - Start the mkdocs dev server"
-	@echo "  clean   - Remove the mkdocs-docs server"
+define help_text +=
+	Makefile targets:
+	  help    - Show this help message.
+	  schema  - Create a JSON file containing a list of docs files to process
+	  gather  - Create mkdocs-docs folder, gather /docs and .md files
+	  serve   - Start the mkdocs dev server
+	  clean   - Remove the mkdocs-docs server
+endef
 
 docslist:
 	$(PYTHON) ./scripts/docslist.py
