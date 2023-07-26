@@ -12,11 +12,11 @@ verbose_flag != if [ -z "$(verbose)" ]; \
 
 define help_text +=
 	Makefile targets:
-	  help    - Show this help message.
-	  schema  - Create a JSON file containing a list of docs files to process
-	  gather  - Create mkdocs-docs folder, gather /docs and .md files
-	  serve   - Start the mkdocs dev server
-	  clean   - Remove the mkdocs-docs server
+	  help		- Show this help message.
+	  schema	- Create a JSON file containing a list of docs files to process
+	  gather	- Create mkdocs-docs folder, gather /docs and .md files
+	  serve		- Start the mkdocs dev server
+	  mkdocs-clean  - Remove the mkdocs-docs server
 endef
 
 docslist:
@@ -24,13 +24,13 @@ docslist:
 
 # Build mkdocs-docs from JSON schema created above
 gather:
-	$(MAKE) clean
+	$(MAKE) mkdocs.clean
 	mkdir -p '$(mkdocs_dir)'
 	$(MAKE) docslist | pax -r -w '$(mkdocs_dir)'
 
 serve:
 	mkdocs serve
 
-clean:
+mkdocs.clean:
 	rm -rf '$(mkdocs_dir)'
 
