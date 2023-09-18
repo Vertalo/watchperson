@@ -1,10 +1,11 @@
 MAKEFLAGS += -s -r -R --no-print-directory
+CURRENT_MAKEFILE := $(lastword $(MAKEFILE_LIST))
 
 # Default values for setup and gather targets
 verbose ?=
 mkdocs_dir ?= mkdocs-docs
-python ?= python
-pip ?= pip
+PYTHON ?= python
+PIP ?= pip
 
 verbose_flag != if [ -z "$(verbose)" ]; \
 	then echo ""; \
@@ -24,9 +25,12 @@ docslist:
 
 # Build mkdocs-docs from JSON schema created above
 gather:
-	$(MAKE) mkdocs.clean
+	$(MAKE) -f $(CURRENT_MAKEFILE) mkdocs.clean
 	mkdir -p '$(mkdocs_dir)'
-	$(MAKE) docslist | pax -r -w '$(mkdocs_dir)'
+	$(MAKE) -f $(CURRENT_MAKEFILE) docslist | pax -r -w '$(mkdocs_dir)'
+
+reqs:
+	$(PIP) install -r './requirements.mkdocs.txt'
 
 serve:
 	mkdocs serve

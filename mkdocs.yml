@@ -1,0 +1,11 @@
+site_name: Vertalo Documentation
+docs_dir: mkdocs-docs
+dev_addr: localhost:1313
+theme:
+  name: material
+
+markdown_extensions:
+  - extra
+  - admonition
+  - md_in_html
+  - mdx_breakless_lists
