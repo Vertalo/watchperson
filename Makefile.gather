@@ -23,6 +23,9 @@ endef
 docslist:
 	$(PYTHON) ./scripts/docslist.py
 
+docs-list: FORCE
+	$(MAKE) -f $(CURRENT_MAKEFILE) docslist > "$@.tmp" && mv "$@.tmp" "$@"
+
 # Build mkdocs-docs from JSON schema created above
 gather:
 	$(MAKE) -f $(CURRENT_MAKEFILE) mkdocs.clean
@@ -33,8 +36,11 @@ reqs:
 	$(PIP) install -r './requirements.mkdocs.txt'
 
 serve:
+	$(MAKE) -f $(CURRENT_MAKEFILE) docs-list
 	mkdocs serve
 
 mkdocs.clean:
 	rm -rf '$(mkdocs_dir)'
+
+FORCE:
 

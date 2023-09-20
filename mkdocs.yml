@@ -1,5 +1,5 @@
 site_name: Vertalo Documentation
-docs_dir: mkdocs-docs
+docs_dir: .
 dev_addr: localhost:1313
 theme:
   name: material
@@ -9,3 +9,9 @@ markdown_extensions:
   - admonition
   - md_in_html
   - mdx_breakless_lists
+
+plugins:
+  - same-dir
+
+hooks:
+  - scripts/file-list.py

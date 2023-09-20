@@ -2,3 +2,4 @@ mkdocs
 mkdocs-material
 pathspec
 mdx_breakless_lists
+mkdocs-same-dir
