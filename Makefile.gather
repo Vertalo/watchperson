@@ -39,6 +39,9 @@ serve:
 	$(MAKE) -f $(CURRENT_MAKEFILE) docs-list
 	mkdocs serve
 
+vserve:
+	. venv/bin/activate && $(MAKE) -f $(CURRENT_MAKEFILE) serve
+
 mkdocs.clean:
 	rm -rf '$(mkdocs_dir)'
 
