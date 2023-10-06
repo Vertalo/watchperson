@@ -1,4 +1,4 @@
-MAKEFLAGS += -s -r -R --no-print-directory
+MAKEFLAGS += -s -r --no-print-directory
 CURRENT_MAKEFILE := $(lastword $(MAKEFILE_LIST))
 
 # Default values for setup and gather targets
